@@ -1,6 +1,7 @@
 import express from 'express';
 import { logger, auditLogger } from '@plincare/shared';
 import schedulingRoutes from './routes/scheduling';
+import dmpRoutes from './routes/dmp';
 
 const app = express();
 app.use(express.json());
@@ -13,6 +14,9 @@ app.get('/health', (req, res) => {
 
 // Mount scheduling routes (Phase 5)
 app.use('/api/fhir', schedulingRoutes);
+
+// Mount DMP routes (Phase 6 - CDA Generation)
+app.use('/api/dmp', dmpRoutes);
 
 // Generic FHIR ingestion endpoint for other resource types
 app.post('/api/fhir/:resourceType', (req, res) => {
@@ -56,5 +60,6 @@ app.listen(PORT, () => {
     logger.info(`Gateway running on port ${PORT}`);
     logger.info('Ingestion FHIR active sur /api/fhir/');
     logger.info('Scheduling APIs (Phase 5) mounted: Schedule, Slot, Appointment, HealthcareService');
+    logger.info('DMP APIs (Phase 6) mounted: /api/dmp/generate-cda, /api/dmp/validate-cda');
 });
 
