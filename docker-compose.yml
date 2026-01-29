@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: pfi-postgres
+    environment:
+      POSTGRES_USER: pfi_user
+      POSTGRES_PASSWORD: pfi_password
+      POSTGRES_DB: pfi_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pfi_postgres_data:/var/lib/postgresql/data
+
+  integration-engine:
+    build: 
+      context: .
+      dockerfile: apps/integration-engine/Dockerfile
+    container_name: pfi-integration-engine
+    ports:
+      - "2100:2100" # MLLP
+    environment:
+      - DATABASE_URL=postgresql://pfi_user:pfi_password@postgres:5432/pfi_db
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    container_name: pfi-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - integration-engine
+
+volumes:
+  pfi_postgres_data:

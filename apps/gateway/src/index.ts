@@ -1,0 +1,49 @@
+import express from 'express';
+import { logger, auditLogger } from '@plincare/shared';
+
+const app = express();
+app.use(express.json());
+
+const PORT = 3000;
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'UP', service: 'Gateway' });
+});
+
+// Endpoints pour recevoir les ressources FHIR
+app.post('/api/fhir/:resourceType', (req, res) => {
+    const resource = req.body;
+    const { resourceType } = req.params;
+
+    logger.info(`FHIR ${resourceType} received at Gateway`, { id: resource.id });
+
+    // Validation Ségur / UCUM pour les Observations
+    if (resourceType === 'Observation' && resource.valueQuantity) {
+        const { system } = resource.valueQuantity;
+        if (system !== 'http://unitsofmeasure.org') {
+            logger.warn('Compliance Warning: Observation valueQuantity system is NOT UCUM', { id: resource.id });
+        } else {
+            logger.info('Compliance Success: UCUM units verified', { id: resource.id });
+        }
+    }
+
+    // Ségur Audit Trail: Ingestion
+    auditLogger.log({
+        actor_id: 'GATEWAY_API',
+        action_type: 'CREATE',
+        resource_id: resource.id || 'NEW_RESOURCE',
+        resource_type: `FHIR_${resourceType.toUpperCase()}`,
+        outcome: 'success',
+        details: {
+            resource_type: resourceType,
+            id: resource.id
+        }
+    });
+
+    res.status(201).json({ status: 'Created', id: resource.id });
+});
+
+app.listen(PORT, () => {
+    logger.info(`Gateway running on port ${PORT}`);
+    logger.info('Ingestion FHIR active sur /api/fhir/');
+});

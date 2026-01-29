@@ -1,0 +1,13 @@
+{
+    "name": "@plincare/shared",
+    "version": "1.0.0",
+    "private": true,
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc"
+    },
+    "dependencies": {
+        "winston": "^3.19.0"
+    }
+}

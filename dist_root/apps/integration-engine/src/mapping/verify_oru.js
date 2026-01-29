@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const hl7_to_fhir_1 = require("./hl7-to-fhir");
+const glucoseHl7 = "MSH|^~\\&|LAB|FACILITY|PFI|RECEIVER|202310271030||ORU^R01|102|P|2.5\rOBR|1|REQ123|RPT456|2339-0^Glucose^LN|||202310271030\rOBX|1|NM|GLY^Glycémie^L|1|5.5|mmol/L|3.9-6.1|N|||F";
+const pdfHl7 = "MSH|^~\\&|LAB|FACILITY|PFI|RECEIVER|202310271030||ORU^R01|103|P|2.5\rOBR|1|REQ124|RPT457|11502-2^Laboratory report^LN|||202310271030\rOBX|1|ED|PDF^Rapport PDF^L|1|^application^pdf^base64^JVBERi0xLjQKJ...||||||F";
+console.log("--- TEST GLUCOSE ---");
+const report1 = (0, hl7_to_fhir_1.mapHl7ToFhirORU)(glucoseHl7);
+console.log(JSON.stringify(report1, null, 2));
+console.log("\n--- TEST PDF ---");
+const report2 = (0, hl7_to_fhir_1.mapHl7ToFhirORU)(pdfHl7);
+console.log(JSON.stringify(report2, null, 2));

@@ -1,0 +1,23 @@
+{
+    "name": "integration-engine",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "start": "ts-node src/index.ts",
+        "dev": "ts-node-dev --respawn src/index.ts",
+        "build": "tsc"
+    },
+    "dependencies": {
+        "@plincare/shared": "*",
+        "axios": "^1.13.4",
+        "dotenv": "^16.3.1"
+    },
+    "devDependencies": {
+        "@types/axios": "^0.9.36",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^20.19.30",
+        "jest": "^30.2.0",
+        "ts-jest": "^29.4.6",
+        "ts-node-dev": "^2.0.0"
+    }
+}
