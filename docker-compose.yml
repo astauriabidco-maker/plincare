@@ -31,7 +31,7 @@ services:
       dockerfile: apps/gateway/Dockerfile
     container_name: pfi-gateway
     ports:
-      - "3000:3000"
+      - "3010:3000"
     environment:
       - NODE_ENV=development
     depends_on:

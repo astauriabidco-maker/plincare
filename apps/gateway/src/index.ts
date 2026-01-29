@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import { logger, auditLogger } from '@plincare/shared';
 import schedulingRoutes from './routes/scheduling';
 import dmpRoutes from './routes/dmp';
@@ -8,10 +9,18 @@ import crashTestRoutes from './routes/crash-test';
 const app = express();
 app.use(express.json());
 
-const PORT = 3000;
+// Serve static files (dashboard)
+app.use('/static', express.static(path.join(__dirname, '../public')));
+
+const PORT = process.env.PORT || 3010;
 
 app.get('/health', (req, res) => {
     res.json({ status: 'UP', service: 'Gateway' });
+});
+
+// Dashboard route
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/demo-dashboard.html'));
 });
 
 // Mount scheduling routes (Phase 5)
@@ -71,5 +80,6 @@ app.listen(PORT, () => {
     logger.info('DMP APIs (Phase 6) mounted: /api/dmp/generate-cda, /api/dmp/validate-cda');
     logger.info('MSSanté APIs (Phase 7) mounted: /api/mssante/send, /api/mssante/lookup-rpps');
     logger.info('Crash Test APIs mounted: /api/crash-test/run-all, /api/crash-test/dashboard');
+    logger.info(`Dashboard accessible sur http://localhost:${PORT}/dashboard`);
 });
 

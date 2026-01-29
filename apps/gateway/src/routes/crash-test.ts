@@ -7,27 +7,8 @@ import { logger } from '@plincare/shared';
 
 const router = Router();
 
-// Import dynamique des tests
-const loadTests = async () => {
-    const {
-        generateConformityReport,
-        testGazelleCdaValidation,
-        testInsiQualification,
-        testDmpSandbox,
-        testFhirApiSecurity,
-        TEST_CDA_CRBIO,
-        TEST_HL7_ADT
-    } = await import('../../integration-engine-client');
-    return {
-        generateConformityReport,
-        testGazelleCdaValidation,
-        testInsiQualification,
-        testDmpSandbox,
-        testFhirApiSecurity,
-        TEST_CDA_CRBIO,
-        TEST_HL7_ADT
-    };
-};
+// Note: En production, les tests seront importés du module de validation
+// Pour le moment, les tests sont définis localement
 
 /**
  * GET /api/crash-test/run-all

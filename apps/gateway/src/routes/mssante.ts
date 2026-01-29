@@ -7,12 +7,8 @@ import { logger } from '@plincare/shared';
 
 const router = Router();
 
-// Import dynamique pour éviter les dépendances circulaires
-const loadModules = async () => {
-    const { getMssanteClient } = await import('../../integration-engine-client');
-    const { getAnnuaireClient } = await import('../../integration-engine-client');
-    return { getMssanteClient, getAnnuaireClient };
-};
+// Note: En mode production, ces clients seront importés dynamiquement
+// Pour le moment, on utilise des stubs en simulation
 
 /**
  * POST /api/mssante/send

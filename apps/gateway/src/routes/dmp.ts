@@ -73,7 +73,7 @@ router.post('/generate-cda', async (req: Request, res: Response) => {
 
         // Import dynamique du module CDA (évite circular deps)
         const { generateCrBio, validateCdaStructure, createDocumentReferenceFhir } =
-            await import('../../integration-engine-client');
+            await import('./integration-engine-client');
 
         // Générer le CDA
         const cdaOptions = {
@@ -147,7 +147,7 @@ router.post('/validate-cda', async (req: Request, res: Response) => {
         }
 
         const { validateCdaStructure, validateAndReport } =
-            await import('../../integration-engine-client');
+            await import('./integration-engine-client');
 
         const result = validateCdaStructure(cdaXml);
         const report = validateAndReport(cdaXml);
