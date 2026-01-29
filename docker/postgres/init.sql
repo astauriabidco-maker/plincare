@@ -133,3 +133,31 @@ CREATE INDEX idx_appointment_patient_next ON appointments(patient_id, start_time
 -- Vue Matérialisée ou Helper pour le "Patient Cockpit"
 -- Cette vue (ou sa logique) est optimisée par les index ci-dessus.
 COMMENT ON TABLE appointments IS 'Optimisé pour Agent 2 : Indexation temporelle pour Zéro Latence sur le Cockpit Patient';
+
+-- Phase 5: Table HealthcareService
+CREATE TABLE healthcare_services (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    resource_id VARCHAR(100) UNIQUE NOT NULL,
+    resource_json JSONB NOT NULL,
+    name VARCHAR(255), -- Indexed for search
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_healthcare_service_name ON healthcare_services(name);
+CREATE INDEX idx_healthcare_service_active ON healthcare_services(active) WHERE active = true;
+
+-- Phase 5: Table FHIR Subscriptions (Webhooks)
+CREATE TABLE fhir_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    resource_id VARCHAR(100) UNIQUE NOT NULL,
+    resource_type VARCHAR(50) NOT NULL, -- e.g., 'Appointment'
+    criteria VARCHAR(500), -- FHIR search criteria
+    channel_type VARCHAR(20) NOT NULL, -- 'rest-hook', 'websocket'
+    endpoint VARCHAR(500) NOT NULL, -- Webhook URL
+    status VARCHAR(20) DEFAULT 'active', -- active, off, error
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_triggered_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_subscription_resource ON fhir_subscriptions(resource_type, status);

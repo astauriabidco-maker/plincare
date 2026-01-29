@@ -1,5 +1,6 @@
 import express from 'express';
 import { logger, auditLogger } from '@plincare/shared';
+import schedulingRoutes from './routes/scheduling';
 
 const app = express();
 app.use(express.json());
@@ -10,10 +11,18 @@ app.get('/health', (req, res) => {
     res.json({ status: 'UP', service: 'Gateway' });
 });
 
-// Endpoints pour recevoir les ressources FHIR
+// Mount scheduling routes (Phase 5)
+app.use('/api/fhir', schedulingRoutes);
+
+// Generic FHIR ingestion endpoint for other resource types
 app.post('/api/fhir/:resourceType', (req, res) => {
     const resource = req.body;
     const { resourceType } = req.params;
+
+    // Skip if already handled by scheduling routes
+    if (['Schedule', 'Slot', 'Appointment', 'HealthcareService'].includes(resourceType)) {
+        return; // Already handled by schedulingRoutes
+    }
 
     logger.info(`FHIR ${resourceType} received at Gateway`, { id: resource.id });
 
@@ -46,4 +55,6 @@ app.post('/api/fhir/:resourceType', (req, res) => {
 app.listen(PORT, () => {
     logger.info(`Gateway running on port ${PORT}`);
     logger.info('Ingestion FHIR active sur /api/fhir/');
+    logger.info('Scheduling APIs (Phase 5) mounted: Schedule, Slot, Appointment, HealthcareService');
 });
+

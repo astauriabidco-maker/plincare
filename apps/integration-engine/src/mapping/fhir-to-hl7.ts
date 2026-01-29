@@ -76,17 +76,45 @@ export function buildSchSegment(appointment: any): string {
 }
 
 /**
- * Génère un message HL7 SIU^S12 complet à partir d'un FHIR Appointment
+ * Type d'action pour le Write-Back SIU
  */
-export function mapFhirToHl7Siu(appointment: any, patient: any): string {
+export type SiuAction = 'create' | 'update' | 'cancel';
+
+/**
+ * Mappe l'action vers le type d'événement SIU correspondant
+ * - S12: New appointment (création)
+ * - S13: Request appointment rescheduling (modification)
+ * - S15: Cancel appointment (annulation)
+ */
+function getSiuEventType(action: SiuAction): string {
+    const eventMap: { [key in SiuAction]: string } = {
+        'create': 'SIU^S12^SIU_S12',
+        'update': 'SIU^S13^SIU_S12',
+        'cancel': 'SIU^S15^SIU_S12'
+    };
+    return eventMap[action];
+}
+
+/**
+ * Génère un message HL7 SIU complet à partir d'un FHIR Appointment
+ * @param appointment - Ressource FHIR Appointment
+ * @param patient - Ressource FHIR Patient
+ * @param action - Type d'action: 'create' (S12), 'update' (S13), ou 'cancel' (S15)
+ */
+export function mapFhirToHl7Siu(appointment: any, patient: any, action: SiuAction = 'create'): string {
     const timestamp = formatToHl7DateTime(new Date().toISOString());
     const messageId = `MSG-${Date.now()}`;
+    const eventType = getSiuEventType(action);
 
-    // MSH - Message Header
-    const msh = `MSH|^~\\&|PFI|FACILITY|HIS|RECEIVER|${timestamp}||SIU^S12^SIU_S12|${messageId}|P|2.5|||AL|NE||8859/1`;
+    // MSH - Message Header (avec type d'événement dynamique)
+    const msh = `MSH|^~\\&|PFI|FACILITY|HIS|RECEIVER|${timestamp}||${eventType}|${messageId}|P|2.5|||AL|NE||8859/1`;
 
     // SCH - Schedule Activity Information
-    const sch = buildSchSegment(appointment);
+    // Pour les annulations, on force le statut à 'cancelled'
+    const appointmentForSch = action === 'cancel'
+        ? { ...appointment, status: 'cancelled' }
+        : appointment;
+    const sch = buildSchSegment(appointmentForSch);
 
     // TQ1 - Timing/Quantity (optionnel mais recommandé)
     const startHl7 = formatToHl7DateTime(appointment.start);
@@ -105,7 +133,8 @@ export function mapFhirToHl7Siu(appointment: any, patient: any): string {
     // AIS - Appointment Information - Service
     const serviceCode = appointment.serviceType?.[0]?.coding?.[0]?.code || 'CON';
     const serviceDisplay = appointment.serviceType?.[0]?.coding?.[0]?.display || 'Consultation';
-    const ais = `AIS|1|A|${serviceCode}^${serviceDisplay}^L||${startHl7}||${duration}|min^^UCUM||Confirmed`;
+    const aisStatus = action === 'cancel' ? 'Cancelled' : 'Confirmed';
+    const ais = `AIS|1|A|${serviceCode}^${serviceDisplay}^L||${startHl7}||${duration}|min^^UCUM||${aisStatus}`;
 
     // AIL - Appointment Information - Location (si disponible)
     let ail = '';

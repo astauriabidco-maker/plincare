@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: PFI - API de Planification FHIR
+  description: |
+    API de planification conforme FHIR R4 pour la Plateforme de Flux Interopérable (PFI).
+    Permet aux applications IA (Hublo, Doctolib) d'interagir avec les ressources de planification hospitalières.
+    
+    ## Write-Back HL7 SIU
+    Lors de la création/modification/annulation d'un Appointment, la PFI génère automatiquement
+    un message HL7 SIU (S12/S13/S15) pour mise à jour du SIH historique.
+    
+    ## Sécurité
+    Authentification OAuth2 Bearer Token avec scopes SMART-on-FHIR.
+  version: 1.0.0
+  contact:
+    name: Équipe PFI
+    email: pfi@example.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3000
+    description: Serveur de développement
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT avec scopes SMART-on-FHIR.
+        Format scopes: patient|system / ResourceType . read|write|*
+  
+  schemas:
+    Schedule:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [Schedule]
+        id:
+          type: string
+        active:
+          type: boolean
+          default: true
+        serviceCategory:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+        serviceType:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+        actor:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reference'
+        planningHorizon:
+          $ref: '#/components/schemas/Period'
+    
+    Slot:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [Slot]
+        id:
+          type: string
+        schedule:
+          $ref: '#/components/schemas/Reference'
+        status:
+          type: string
+          enum: [busy, free, busy-unavailable, busy-tentative, entered-in-error]
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    
+    Appointment:
+      type: object
+      required:
+        - resourceType
+        - status
+        - participant
+      properties:
+        resourceType:
+          type: string
+          enum: [Appointment]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [proposed, pending, booked, arrived, fulfilled, cancelled, noshow, entered-in-error, checked-in, waitlist]
+        serviceType:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        minutesDuration:
+          type: integer
+        participant:
+          type: array
+          items:
+            type: object
+            properties:
+              actor:
+                $ref: '#/components/schemas/Reference'
+              status:
+                type: string
+    
+    HealthcareService:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [HealthcareService]
+        id:
+          type: string
+        active:
+          type: boolean
+        name:
+          type: string
+        category:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+    
+    Subscription:
+      type: object
+      required:
+        - resourceType
+        - status
+        - channel
+        - criteria
+      properties:
+        resourceType:
+          type: string
+          enum: [Subscription]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [requested, active, error, off]
+        criteria:
+          type: string
+          description: "FHIR search criteria, ex: Appointment?status=cancelled"
+        channel:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [rest-hook, websocket]
+            endpoint:
+              type: string
+              format: uri
+            header:
+              type: array
+              items:
+                type: string
+    
+    CodeableConcept:
+      type: object
+      properties:
+        coding:
+          type: array
+          items:
+            type: object
+            properties:
+              system:
+                type: string
+              code:
+                type: string
+              display:
+                type: string
+    
+    Reference:
+      type: object
+      properties:
+        reference:
+          type: string
+        display:
+          type: string
+    
+    Period:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    
+    Bundle:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [Bundle]
+        type:
+          type: string
+          enum: [searchset]
+        total:
+          type: integer
+        entry:
+          type: array
+          items:
+            type: object
+            properties:
+              resource:
+                type: object
+    
+    OperationOutcome:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [OperationOutcome]
+        issue:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: [fatal, error, warning, information]
+              code:
+                type: string
+              diagnostics:
+                type: string
+
+paths:
+  /api/fhir/Schedule:
+    get:
+      summary: Lister les plannings
+      tags: [Schedule]
+      security:
+        - bearerAuth: [system/Schedule.read]
+      responses:
+        '200':
+          description: Bundle de Schedules
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer un planning
+      tags: [Schedule]
+      security:
+        - bearerAuth: [system/Schedule.write]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '201':
+          description: Schedule créé
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+
+  /api/fhir/Slot:
+    get:
+      summary: Rechercher des créneaux
+      tags: [Slot]
+      security:
+        - bearerAuth: [system/Slot.read]
+      parameters:
+        - name: schedule
+          in: query
+          schema:
+            type: string
+          description: Référence Schedule (ex: Schedule/scanner-1)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [free, busy]
+          description: Statut du créneau
+      responses:
+        '200':
+          description: Bundle de Slots
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer un créneau
+      tags: [Slot]
+      security:
+        - bearerAuth: [system/Slot.write]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Slot'
+      responses:
+        '201':
+          description: Slot créé
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Slot'
+
+  /api/fhir/Appointment:
+    get:
+      summary: Rechercher des rendez-vous
+      tags: [Appointment]
+      security:
+        - bearerAuth: [patient/Appointment.read, system/Appointment.read]
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+          description: Référence Patient
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Statut du RDV
+      responses:
+        '200':
+          description: Bundle d'Appointments
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer un rendez-vous
+      description: |
+        Crée un nouveau rendez-vous et déclenche automatiquement un Write-Back HL7 SIU^S12
+        vers le SIH historique.
+      tags: [Appointment]
+      security:
+        - bearerAuth: [patient/Appointment.write, system/Appointment.write]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      responses:
+        '201':
+          description: Appointment créé + SIU^S12 envoyé
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+
+  /api/fhir/Appointment/{id}:
+    get:
+      summary: Récupérer un rendez-vous
+      tags: [Appointment]
+      security:
+        - bearerAuth: [patient/Appointment.read, system/Appointment.read]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Appointment trouvé
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '404':
+          description: Non trouvé
+    patch:
+      summary: Modifier un rendez-vous
+      description: |
+        Modifie un rendez-vous existant.
+        - Si status devient 'cancelled', déclenche SIU^S15
+        - Sinon, déclenche SIU^S13
+      tags: [Appointment]
+      security:
+        - bearerAuth: [patient/Appointment.write, system/Appointment.write]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Appointment modifié
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+
+  /api/fhir/HealthcareService:
+    get:
+      summary: Lister les services de santé
+      tags: [HealthcareService]
+      security:
+        - bearerAuth: [system/HealthcareService.read]
+      responses:
+        '200':
+          description: Bundle de HealthcareServices
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer un service de santé
+      tags: [HealthcareService]
+      security:
+        - bearerAuth: [system/HealthcareService.write]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/HealthcareService'
+      responses:
+        '201':
+          description: HealthcareService créé
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/HealthcareService'
+
+  /api/fhir/Subscription:
+    get:
+      summary: Lister les souscriptions
+      tags: [Subscription]
+      security:
+        - bearerAuth: [system/Subscription.read]
+      responses:
+        '200':
+          description: Bundle de Subscriptions
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer une souscription webhook
+      description: |
+        Enregistre une souscription pour recevoir des notifications en temps réel
+        lorsqu'une ressource correspondant aux critères est créée/modifiée.
+        Latence cible: < 2 secondes.
+      tags: [Subscription]
+      security:
+        - bearerAuth: [system/Subscription.write]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Subscription'
+      responses:
+        '201':
+          description: Subscription créée
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+
+tags:
+  - name: Schedule
+    description: Gestion des plannings (ressources, personnels)
+  - name: Slot
+    description: Créneaux horaires disponibles
+  - name: Appointment
+    description: Rendez-vous avec Write-Back HL7 SIU
+  - name: HealthcareService
+    description: Types de services de santé
+  - name: Subscription
+    description: Webhooks temps réel

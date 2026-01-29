@@ -46,16 +46,36 @@ describe('Write-Back FHIR -> HL7 SIU', () => {
     });
 
     describe('mapFhirToHl7Siu', () => {
-        it('should generate a complete SIU^S12 message', () => {
-            const siu = mapFhirToHl7Siu(mockAppointment, mockPatient);
+        it('should generate a complete SIU^S12 message for create action', () => {
+            const siu = mapFhirToHl7Siu(mockAppointment, mockPatient, 'create');
 
-            // Vérifier la présence des segments obligatoires
             expect(siu).toContain('MSH|');
-            expect(siu).toContain('SIU^S12');
+            expect(siu).toContain('SIU^S12^SIU_S12');
             expect(siu).toContain('SCH|');
             expect(siu).toContain('PID|');
             expect(siu).toContain('RGS|');
             expect(siu).toContain('AIS|');
+        });
+
+        it('should generate SIU^S13 for update action', () => {
+            const siu = mapFhirToHl7Siu(mockAppointment, mockPatient, 'update');
+
+            expect(siu).toContain('SIU^S13^SIU_S12');
+            expect(siu).toContain('SCH|');
+            expect(siu).toContain('Confirmed'); // AIS status
+        });
+
+        it('should generate SIU^S15 for cancel action', () => {
+            const siu = mapFhirToHl7Siu(mockAppointment, mockPatient, 'cancel');
+
+            expect(siu).toContain('SIU^S15^SIU_S12');
+            expect(siu).toContain('Cancelled'); // SCH status & AIS status
+        });
+
+        it('should default to S12 when no action specified', () => {
+            const siu = mapFhirToHl7Siu(mockAppointment, mockPatient);
+
+            expect(siu).toContain('SIU^S12^SIU_S12');
         });
 
         it('should include INS identifier in PID segment', () => {
