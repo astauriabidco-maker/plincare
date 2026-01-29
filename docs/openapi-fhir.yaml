@@ -1,0 +1,1075 @@
+openapi: 3.0.3
+info:
+  title: PFI - API FHIR Complète
+  description: |
+    # Plateforme de Flux Interopérable (PFI)
+    
+    API FHIR R4 conforme Ségur Wave 2 pour l'interopérabilité des systèmes de santé.
+    
+    ## Fonctionnalités Principales
+    
+    | Module | Description |
+    |--------|-------------|
+    | **Patient** | Gestion identité avec INS Qualifié |
+    | **Observation** | Résultats de biologie (LOINC/UCUM) |
+    | **DiagnosticReport** | Comptes-rendus (liaison Patient obligatoire) |
+    | **DocumentReference** | Documents stockés (PDF, CDA) |
+    | **Scheduling** | Planification + Write-Back HL7 SIU |
+    | **DMP** | Génération CDA R2 N1 pour Mon Espace Santé |
+    
+    ## Conformité
+    - **Ségur Wave 2** : INS, Audit Trail, HDS
+    - **CI-SIS ANS** : CDA R2 N1 pour alimentation DMP
+    - **HL7 V2.5** : Write-Back SIU automatique
+    
+    ## Authentification
+    OAuth2 Bearer Token avec scopes SMART-on-FHIR.
+    
+  version: 2.0.0
+  contact:
+    name: Équipe PFI
+    email: pfi@plincare.fr
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3000
+    description: Développement local
+  - url: https://api.pfi.example.com
+    description: Production
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Patient
+    description: Ressources Patient avec INS Ségur
+  - name: Observation
+    description: Résultats de biologie (LOINC/UCUM)
+  - name: DiagnosticReport
+    description: Comptes-rendus de biologie
+  - name: DocumentReference
+    description: Documents (PDF, CDA)
+  - name: Schedule
+    description: Plannings de ressources
+  - name: Slot
+    description: Créneaux horaires
+  - name: Appointment
+    description: Rendez-vous (+ Write-Back SIU)
+  - name: HealthcareService
+    description: Services de santé
+  - name: Subscription
+    description: Webhooks temps réel
+  - name: DMP
+    description: Génération CDA pour Mon Espace Santé
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT avec scopes SMART-on-FHIR.
+        
+        **Format scopes:** `{context}/{resourceType}.{permission}`
+        
+        Exemples:
+        - `patient/Observation.read` - Lecture observations du patient
+        - `system/Appointment.write` - Écriture rendez-vous système
+        - `system/*.*` - Accès complet (admin)
+
+  schemas:
+    # =========================================================================
+    # FHIR Base Types
+    # =========================================================================
+    
+    Identifier:
+      type: object
+      properties:
+        system:
+          type: string
+          description: URI du système d'identification
+          example: "urn:oid:1.2.250.1.213.1.4.5"
+        value:
+          type: string
+          description: Valeur de l'identifiant
+          example: "123456789012345"
+        type:
+          $ref: '#/components/schemas/CodeableConcept'
+    
+    HumanName:
+      type: object
+      properties:
+        use:
+          type: string
+          enum: [usual, official, temp, nickname, anonymous, old, maiden]
+        family:
+          type: string
+          description: Nom de famille
+          example: "DUPONT"
+        given:
+          type: array
+          items:
+            type: string
+          example: ["JEAN", "PIERRE"]
+    
+    CodeableConcept:
+      type: object
+      properties:
+        coding:
+          type: array
+          items:
+            type: object
+            properties:
+              system:
+                type: string
+              code:
+                type: string
+              display:
+                type: string
+        text:
+          type: string
+    
+    Reference:
+      type: object
+      properties:
+        reference:
+          type: string
+          example: "Patient/pat-123"
+        display:
+          type: string
+    
+    Quantity:
+      type: object
+      properties:
+        value:
+          type: number
+          example: 5.2
+        unit:
+          type: string
+          example: "mmol/L"
+        system:
+          type: string
+          example: "http://unitsofmeasure.org"
+        code:
+          type: string
+          example: "mmol/L"
+    
+    Period:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    
+    Attachment:
+      type: object
+      properties:
+        contentType:
+          type: string
+          example: "application/pdf"
+        data:
+          type: string
+          format: byte
+          description: Contenu en Base64
+        title:
+          type: string
+    
+    Bundle:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [Bundle]
+        type:
+          type: string
+          enum: [searchset, collection, batch, transaction]
+        total:
+          type: integer
+        entry:
+          type: array
+          items:
+            type: object
+            properties:
+              fullUrl:
+                type: string
+              resource:
+                type: object
+    
+    OperationOutcome:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [OperationOutcome]
+        issue:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: [fatal, error, warning, information]
+              code:
+                type: string
+              diagnostics:
+                type: string
+    
+    # =========================================================================
+    # Clinical Resources
+    # =========================================================================
+    
+    Patient:
+      type: object
+      required:
+        - resourceType
+        - identifier
+        - name
+      properties:
+        resourceType:
+          type: string
+          enum: [Patient]
+        id:
+          type: string
+        identifier:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+          description: |
+            **INS Obligatoire** : Au moins un identifiant avec system `urn:oid:1.2.250.1.213.1.4.5`
+        name:
+          type: array
+          items:
+            $ref: '#/components/schemas/HumanName'
+          description: |
+            **Nom officiel obligatoire** : Au moins un nom avec `use: official`
+        birthDate:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female, other, unknown]
+        extension:
+          type: array
+          items:
+            type: object
+          description: Extensions FR-Core (identityReliability, birthPlace, etc.)
+      example:
+        resourceType: Patient
+        id: pat-123456789012345
+        identifier:
+          - system: "urn:oid:1.2.250.1.213.1.4.5"
+            value: "123456789012345"
+        name:
+          - use: official
+            family: DUPONT
+            given: [JEAN]
+        birthDate: "1985-06-15"
+        gender: male
+    
+    Observation:
+      type: object
+      required:
+        - resourceType
+        - status
+        - code
+        - subject
+      properties:
+        resourceType:
+          type: string
+          enum: [Observation]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [registered, preliminary, final, amended, corrected, cancelled, entered-in-error, unknown]
+        code:
+          $ref: '#/components/schemas/CodeableConcept'
+          description: Code LOINC obligatoire
+        subject:
+          $ref: '#/components/schemas/Reference'
+        effectiveDateTime:
+          type: string
+          format: date-time
+        valueQuantity:
+          $ref: '#/components/schemas/Quantity'
+          description: Unités UCUM obligatoires (system http://unitsofmeasure.org)
+        referenceRange:
+          type: array
+          items:
+            type: object
+            properties:
+              low:
+                $ref: '#/components/schemas/Quantity'
+              high:
+                $ref: '#/components/schemas/Quantity'
+      example:
+        resourceType: Observation
+        id: obs-glucose-001
+        status: final
+        code:
+          coding:
+            - system: "http://loinc.org"
+              code: "2339-0"
+              display: "Glucose [Mass/volume] in Blood"
+        subject:
+          reference: "Patient/pat-123"
+        valueQuantity:
+          value: 5.2
+          unit: "mmol/L"
+          system: "http://unitsofmeasure.org"
+          code: "mmol/L"
+    
+    DiagnosticReport:
+      type: object
+      required:
+        - resourceType
+        - status
+        - code
+        - subject
+      properties:
+        resourceType:
+          type: string
+          enum: [DiagnosticReport]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [registered, partial, preliminary, final, amended, corrected, appended, cancelled, entered-in-error, unknown]
+        code:
+          $ref: '#/components/schemas/CodeableConcept'
+        subject:
+          $ref: '#/components/schemas/Reference'
+          description: |
+            **Lien Patient obligatoire** : Contrainte "Zéro Orphelin" Ségur
+        issued:
+          type: string
+          format: date-time
+        result:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reference'
+        presentedForm:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+    
+    DocumentReference:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [DocumentReference]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [current, superseded, entered-in-error]
+        type:
+          $ref: '#/components/schemas/CodeableConcept'
+        subject:
+          $ref: '#/components/schemas/Reference'
+        date:
+          type: string
+          format: date-time
+        content:
+          type: array
+          items:
+            type: object
+            properties:
+              attachment:
+                $ref: '#/components/schemas/Attachment'
+              format:
+                type: object
+                properties:
+                  system:
+                    type: string
+                  code:
+                    type: string
+                  display:
+                    type: string
+    
+    # =========================================================================
+    # Scheduling Resources
+    # =========================================================================
+    
+    Schedule:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [Schedule]
+        id:
+          type: string
+        active:
+          type: boolean
+        serviceCategory:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+        actor:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reference'
+        planningHorizon:
+          $ref: '#/components/schemas/Period'
+    
+    Slot:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [Slot]
+        id:
+          type: string
+        schedule:
+          $ref: '#/components/schemas/Reference'
+        status:
+          type: string
+          enum: [busy, free, busy-unavailable, busy-tentative, entered-in-error]
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    
+    Appointment:
+      type: object
+      required:
+        - resourceType
+        - status
+        - participant
+      properties:
+        resourceType:
+          type: string
+          enum: [Appointment]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [proposed, pending, booked, arrived, fulfilled, cancelled, noshow, entered-in-error, checked-in, waitlist]
+        serviceType:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        minutesDuration:
+          type: integer
+        participant:
+          type: array
+          items:
+            type: object
+            properties:
+              actor:
+                $ref: '#/components/schemas/Reference'
+              status:
+                type: string
+                enum: [accepted, declined, tentative, needs-action]
+    
+    HealthcareService:
+      type: object
+      properties:
+        resourceType:
+          type: string
+          enum: [HealthcareService]
+        id:
+          type: string
+        active:
+          type: boolean
+        name:
+          type: string
+        category:
+          type: array
+          items:
+            $ref: '#/components/schemas/CodeableConcept'
+    
+    Subscription:
+      type: object
+      required:
+        - status
+        - channel
+        - criteria
+      properties:
+        resourceType:
+          type: string
+          enum: [Subscription]
+        id:
+          type: string
+        status:
+          type: string
+          enum: [requested, active, error, off]
+        criteria:
+          type: string
+          description: "Critères FHIR, ex: Appointment?status=cancelled"
+        channel:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [rest-hook, websocket]
+            endpoint:
+              type: string
+              format: uri
+            header:
+              type: array
+              items:
+                type: string
+    
+    # =========================================================================
+    # DMP Types
+    # =========================================================================
+    
+    CdaGenerationRequest:
+      type: object
+      required:
+        - patientId
+        - diagnosticReportId
+      properties:
+        patientId:
+          type: string
+          description: ID du Patient FHIR
+        diagnosticReportId:
+          type: string
+          description: ID du DiagnosticReport FHIR
+        observationIds:
+          type: array
+          items:
+            type: string
+          description: IDs des Observations à inclure (optionnel)
+        options:
+          type: object
+          properties:
+            useStructuredBody:
+              type: boolean
+              description: true = CDA N3 (structuré), false = CDA N1 (PDF)
+              default: false
+            authorRpps:
+              type: string
+              description: RPPS de l'auteur (11 chiffres)
+            custodianFiness:
+              type: string
+              description: FINESS de l'établissement
+            custodianName:
+              type: string
+              description: Nom de l'établissement
+    
+    CdaGenerationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        validation:
+          type: object
+          properties:
+            isValid:
+              type: boolean
+            warnings:
+              type: array
+              items:
+                type: object
+        documentReference:
+          $ref: '#/components/schemas/DocumentReference'
+        cdaXml:
+          type: string
+          description: Document CDA XML brut
+    
+    CdaValidationResult:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              message:
+                type: string
+        warnings:
+          type: array
+          items:
+            type: object
+        report:
+          type: string
+          description: Rapport de validation formaté
+
+paths:
+  # ===========================================================================
+  # Patient Endpoints
+  # ===========================================================================
+  
+  /api/fhir/Patient:
+    get:
+      summary: Rechercher des patients
+      tags: [Patient]
+      parameters:
+        - name: identifier
+          in: query
+          schema:
+            type: string
+          description: "INS ou IPP (ex: urn:oid:1.2.250.1.213.1.4.5|123456789012345)"
+        - name: family
+          in: query
+          schema:
+            type: string
+          description: Nom de famille
+        - name: birthdate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Bundle de Patients
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    
+    post:
+      summary: Créer un patient
+      tags: [Patient]
+      description: |
+        **Contraintes Ségur obligatoires :**
+        - INS avec OID `1.2.250.1.213.1.4.5`
+        - Nom avec `use: official`
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Patient'
+      responses:
+        '201':
+          description: Patient créé
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '422':
+          description: Validation Ségur échouée
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+  
+  /api/fhir/Patient/{id}:
+    get:
+      summary: Récupérer un patient
+      tags: [Patient]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Patient trouvé
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '404':
+          description: Non trouvé
+  
+  # ===========================================================================
+  # Observation Endpoints
+  # ===========================================================================
+  
+  /api/fhir/Observation:
+    get:
+      summary: Rechercher des observations
+      tags: [Observation]
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+          description: Référence Patient
+        - name: code
+          in: query
+          schema:
+            type: string
+          description: "Code LOINC (ex: 2339-0)"
+        - name: date
+          in: query
+          schema:
+            type: string
+          description: "Date effective (ex: ge2026-01-01)"
+      responses:
+        '200':
+          description: Bundle d'Observations
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    
+    post:
+      summary: Créer une observation
+      tags: [Observation]
+      description: |
+        **Conformité Ségur :**
+        - Code LOINC obligatoire
+        - Unités UCUM obligatoires (system http://unitsofmeasure.org)
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Observation'
+      responses:
+        '201':
+          description: Observation créée
+  
+  # ===========================================================================
+  # DiagnosticReport Endpoints
+  # ===========================================================================
+  
+  /api/fhir/DiagnosticReport:
+    get:
+      summary: Rechercher des comptes-rendus
+      tags: [DiagnosticReport]
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+          description: Référence Patient
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bundle de DiagnosticReports
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    
+    post:
+      summary: Créer un compte-rendu
+      tags: [DiagnosticReport]
+      description: |
+        **Contrainte Zéro Orphelin :**
+        Le champ `subject` doit référencer un Patient existant.
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/DiagnosticReport'
+      responses:
+        '201':
+          description: DiagnosticReport créé
+        '422':
+          description: Patient référencé inexistant
+  
+  # ===========================================================================
+  # DocumentReference Endpoints
+  # ===========================================================================
+  
+  /api/fhir/DocumentReference:
+    get:
+      summary: Rechercher des documents
+      tags: [DocumentReference]
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: "Code LOINC du type de document"
+      responses:
+        '200':
+          description: Bundle de DocumentReferences
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+  
+  # ===========================================================================
+  # Scheduling Endpoints
+  # ===========================================================================
+  
+  /api/fhir/Schedule:
+    get:
+      summary: Lister les plannings
+      tags: [Schedule]
+      responses:
+        '200':
+          description: Bundle de Schedules
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer un planning
+      tags: [Schedule]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '201':
+          description: Schedule créé
+  
+  /api/fhir/Slot:
+    get:
+      summary: Rechercher des créneaux
+      tags: [Slot]
+      parameters:
+        - name: schedule
+          in: query
+          schema:
+            type: string
+          description: "Référence Schedule (ex: Schedule/scanner-1)"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [free, busy]
+      responses:
+        '200':
+          description: Bundle de Slots
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer un créneau
+      tags: [Slot]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Slot'
+      responses:
+        '201':
+          description: Slot créé
+  
+  /api/fhir/Appointment:
+    get:
+      summary: Rechercher des rendez-vous
+      tags: [Appointment]
+      parameters:
+        - name: patient
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Bundle d'Appointments
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+    post:
+      summary: Créer un rendez-vous
+      tags: [Appointment]
+      description: |
+        **Write-Back automatique :**
+        Déclenche l'envoi d'un message HL7 SIU^S12 vers le SIH historique.
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Appointment'
+      responses:
+        '201':
+          description: Appointment créé + SIU^S12 envoyé
+  
+  /api/fhir/Appointment/{id}:
+    get:
+      summary: Récupérer un rendez-vous
+      tags: [Appointment]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Appointment trouvé
+        '404':
+          description: Non trouvé
+    patch:
+      summary: Modifier un rendez-vous
+      tags: [Appointment]
+      description: |
+        **Write-Back automatique :**
+        - Annulation (status=cancelled) → SIU^S15
+        - Modification → SIU^S13
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/fhir+json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Appointment modifié
+  
+  /api/fhir/HealthcareService:
+    get:
+      summary: Lister les services de santé
+      tags: [HealthcareService]
+      responses:
+        '200':
+          description: Bundle de HealthcareServices
+    post:
+      summary: Créer un service
+      tags: [HealthcareService]
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/HealthcareService'
+      responses:
+        '201':
+          description: Service créé
+  
+  /api/fhir/Subscription:
+    get:
+      summary: Lister les souscriptions
+      tags: [Subscription]
+      responses:
+        '200':
+          description: Bundle de Subscriptions
+    post:
+      summary: Créer une souscription webhook
+      tags: [Subscription]
+      description: |
+        Enregistre un webhook pour notifications temps réel.
+        **Latence cible : < 2 secondes**
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/Subscription'
+      responses:
+        '201':
+          description: Subscription créée
+  
+  # ===========================================================================
+  # DMP Endpoints (CDA Generation)
+  # ===========================================================================
+  
+  /api/dmp/generate-cda:
+    post:
+      summary: Générer un document CDA R2 N1
+      tags: [DMP]
+      description: |
+        Génère un document CDA conforme CI-SIS ANS pour alimentation du DMP (Mon Espace Santé).
+        
+        **Types supportés :**
+        - CR-BIO (Compte-Rendu de Biologie Médicale)
+        
+        **OIDs utilisés :**
+        - INS Patient : `1.2.250.1.213.1.4.5`
+        - RPPS Auteur : `1.2.250.1.71.4.2.1`
+        - FINESS Établissement : `1.2.250.1.71.4.2.2`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CdaGenerationRequest'
+      responses:
+        '201':
+          description: CDA généré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CdaGenerationResponse'
+        '404':
+          description: Patient ou DiagnosticReport non trouvé
+        '422':
+          description: Validation ANS échouée (INS/RPPS manquant)
+  
+  /api/dmp/validate-cda:
+    post:
+      summary: Valider un document CDA
+      tags: [DMP]
+      description: |
+        Valide la structure d'un document CDA contre les exigences ANS CI-SIS.
+        
+        **Vérifications effectuées :**
+        - Présence recordTarget avec INS
+        - Présence author avec RPPS
+        - Présence custodian avec FINESS
+        - Structure XML valide
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              type: string
+              description: Document CDA XML
+      responses:
+        '200':
+          description: Résultat de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CdaValidationResult'
+  
+  # ===========================================================================
+  # Health Check
+  # ===========================================================================
+  
+  /health:
+    get:
+      summary: Vérifier l'état du service
+      tags: [Health]
+      security: []
+      responses:
+        '200':
+          description: Service opérationnel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [UP]
+                  service:
+                    type: string
