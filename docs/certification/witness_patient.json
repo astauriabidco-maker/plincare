@@ -1,0 +1,76 @@
+{
+    "resourceType": "Patient",
+    "id": "pat-test-segur-001",
+    "meta": {
+        "profile": [
+            "https://hl7.fr/ig/fhir/core/StructureDefinition/fr-core-patient"
+        ],
+        "lastUpdated": "2026-01-29T10:56:42.000Z"
+    },
+    "identifier": [
+        {
+            "use": "official",
+            "system": "urn:oid:1.2.250.1.213.1.4.5",
+            "value": "123456789012345",
+            "type": {
+                "coding": [
+                    {
+                        "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                        "code": "NH",
+                        "display": "National Health Identifier"
+                    }
+                ]
+            }
+        }
+    ],
+    "name": [
+        {
+            "use": "official",
+            "family": "TESTEUR",
+            "given": [
+                "MARIE",
+                "JEANNE"
+            ]
+        }
+    ],
+    "birthDate": "1985-06-15",
+    "gender": "female",
+    "address": [
+        {
+            "use": "home",
+            "line": [
+                "123 RUE DE TEST",
+                "APT 4"
+            ],
+            "city": "PARIS",
+            "postalCode": "75001",
+            "country": "FR"
+        }
+    ],
+    "telecom": [
+        {
+            "system": "phone",
+            "value": "0612345678",
+            "use": "mobile"
+        }
+    ],
+    "extension": [
+        {
+            "url": "https://hl7.fr/ig/fhir/core/StructureDefinition/fr-core-identity-reliability",
+            "valueCodeableConcept": {
+                "coding": [
+                    {
+                        "system": "https://hl7.fr/ig/fhir/core/CodeSystem/fr-core-cs-v2-0445",
+                        "code": "VALI",
+                        "display": "Identité validée"
+                    }
+                ]
+            }
+        },
+        {
+            "url": "https://hl7.fr/ig/fhir/core/StructureDefinition/fr-core-birth-list-given-name",
+            "valueString": "MARIE JEANNE"
+        }
+    ],
+    "_comment": "FICHIER TÉMOIN - Patient conforme Ségur Wave 2 avec INS Qualifié"
+}

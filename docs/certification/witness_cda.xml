@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  FICHIER TÉMOIN - Document CDA R2 N1 conforme CI-SIS ANS
+  Type: Compte-Rendu de Biologie Médicale (CR-BIO)
+  Date: 2026-01-29
+-->
+<ClinicalDocument xmlns="urn:hl7-org:v3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="urn:hl7-org:v3 CDA.xsd">
+  
+  <!-- ============================================== -->
+  <!-- CDA Header                                     -->
+  <!-- ============================================== -->
+  
+  <!-- Type ID CDA R2 -->
+  <typeId root="2.16.840.1.113883.1.3" extension="POCD_HD000040"/>
+  
+  <!-- Template CI-SIS ANS -->
+  <templateId root="1.2.250.1.213.1.1.1.1"/>
+  
+  <!-- Document ID unique -->
+  <id root="1.2.250.1.213.1.1.1" extension="DOC-TEST-SEGUR-001"/>
+  
+  <!-- Code LOINC CR-BIO -->
+  <code code="11502-2" codeSystem="2.16.840.1.113883.6.1" 
+        codeSystemName="LOINC" displayName="Compte Rendu de Biologie Médicale"/>
+  
+  <title>Compte-Rendu de Biologie Médicale - Test Ségur</title>
+  
+  <effectiveTime value="20260129105642"/>
+  
+  <confidentialityCode code="N" codeSystem="2.16.840.1.113883.5.25" 
+                       displayName="Normal"/>
+  
+  <languageCode code="fr-FR"/>
+  
+  <!-- ============================================== -->
+  <!-- Patient (recordTarget) avec INS               -->
+  <!-- ============================================== -->
+  
+  <recordTarget>
+    <patientRole>
+      <!-- INS avec OID officiel ANS -->
+      <id root="1.2.250.1.213.1.4.5" extension="123456789012345"/>
+      
+      <addr use="H">
+        <streetAddressLine>123 RUE DE TEST</streetAddressLine>
+        <city>PARIS</city>
+        <postalCode>75001</postalCode>
+        <country>FR</country>
+      </addr>
+      
+      <telecom value="tel:0612345678" use="MC"/>
+      
+      <patient>
+        <name>
+          <family>TESTEUR</family>
+          <given>MARIE</given>
+          <given>JEANNE</given>
+        </name>
+        <administrativeGenderCode code="F" codeSystem="2.16.840.1.113883.5.1"/>
+        <birthTime value="19850615"/>
+      </patient>
+    </patientRole>
+  </recordTarget>
+  
+  <!-- ============================================== -->
+  <!-- Auteur (author) avec RPPS                     -->
+  <!-- ============================================== -->
+  
+  <author>
+    <time value="20260129105642"/>
+    <assignedAuthor>
+      <!-- RPPS avec OID officiel ANS -->
+      <id root="1.2.250.1.71.4.2.1" extension="10101010101"/>
+      
+      <assignedPerson>
+        <name>
+          <prefix>Dr</prefix>
+          <given>Sophie</given>
+          <family>MARTIN</family>
+        </name>
+      </assignedPerson>
+      
+      <representedOrganization>
+        <id root="1.2.250.1.71.4.2.2" extension="999999999"/>
+        <name>Laboratoire d'Analyses Médicales Test</name>
+      </representedOrganization>
+    </assignedAuthor>
+  </author>
+  
+  <!-- ============================================== -->
+  <!-- Établissement (custodian) avec FINESS         -->
+  <!-- ============================================== -->
+  
+  <custodian>
+    <assignedCustodian>
+      <representedCustodianOrganization>
+        <!-- FINESS avec OID officiel ANS -->
+        <id root="1.2.250.1.71.4.2.2" extension="999999999"/>
+        <name>Établissement de Santé Test</name>
+        <telecom value="tel:0140000000"/>
+        <addr>
+          <streetAddressLine>1 Avenue de la Santé</streetAddressLine>
+          <city>PARIS</city>
+          <postalCode>75014</postalCode>
+          <country>FR</country>
+        </addr>
+      </representedCustodianOrganization>
+    </assignedCustodian>
+  </custodian>
+  
+  <!-- ============================================== -->
+  <!-- Destinataire (informationRecipient)           -->
+  <!-- ============================================== -->
+  
+  <informationRecipient>
+    <intendedRecipient>
+      <id root="1.2.250.1.71.4.2.1" extension="20202020202"/>
+      <informationRecipient>
+        <name>
+          <prefix>Dr</prefix>
+          <given>Jean</given>
+          <family>DUPONT</family>
+        </name>
+      </informationRecipient>
+    </intendedRecipient>
+  </informationRecipient>
+  
+  <!-- ============================================== -->
+  <!-- Corps du document (nonXMLBody pour N1)        -->
+  <!-- ============================================== -->
+  
+  <component>
+    <nonXMLBody>
+      <!-- PDF encodé en Base64 (extrait pour lisibilité) -->
+      <text mediaType="application/pdf" representation="B64">
+        JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4K
+        ZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4K
+        ZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAg
+        MCAxMjQwIDg3NF0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgPDwgL1R5cGUgL0ZvbnQgL1N1
+        YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhID4+ID4+ID4+IC9Db250ZW50cyA0IDAg
+        UiA+PgplbmRvYmoKNCAwIG9iago8PCAvTGVuZ3RoIDUwID4+CnN0cmVhbQpCVAovRjEgMjQgVGYK
+        MTAwIDgwMCBUZAooQ29tcHRlLVJlbmR1IGRlIEJpb2xvZ2llKSBUagoKRVQKZW5kc3RyZWFtCmVu
+        ZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAw
+        MDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAzMTQgMDAwMDAgbiAK
+        dHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0MTQKJSVFT0YK
+      </text>
+    </nonXMLBody>
+  </component>
+  
+</ClinicalDocument>

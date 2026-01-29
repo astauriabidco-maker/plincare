@@ -1,0 +1,159 @@
+[
+    {
+        "timestamp": "2026-01-29T10:42:15.234Z",
+        "actor_id": "INTEGRATION_ENGINE",
+        "action_type": "RECEIVE",
+        "resource_id": "msg-hl7-adt-001",
+        "resource_type": "HL7_ADT_A04",
+        "outcome": "success",
+        "details": {
+            "message_type": "ADT^A04",
+            "patient_id": "123456789012345",
+            "source_system": "HIS_LEGACY",
+            "correlation_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:42:15.456Z",
+        "actor_id": "PATIENT_VALIDATOR",
+        "action_type": "VALIDATE",
+        "resource_id": "pat-123456789012345",
+        "resource_type": "FHIR_PATIENT",
+        "outcome": "success",
+        "details": {
+            "ins_format_valid": true,
+            "ins_oid_valid": true,
+            "official_name_present": true,
+            "identity_status": "VALI"
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:42:15.678Z",
+        "actor_id": "GATEWAY_API",
+        "action_type": "CREATE",
+        "resource_id": "pat-123456789012345",
+        "resource_type": "FHIR_PATIENT",
+        "outcome": "success",
+        "details": {
+            "http_method": "POST",
+            "endpoint": "/api/fhir/Patient",
+            "response_code": 201,
+            "ins_qualified": true
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:43:22.123Z",
+        "actor_id": "ORU_PROCESSOR",
+        "action_type": "RECEIVE",
+        "resource_id": "msg-hl7-oru-001",
+        "resource_type": "HL7_ORU_R01",
+        "outcome": "success",
+        "details": {
+            "message_type": "ORU^R01",
+            "patient_id": "123456789012345",
+            "observation_count": 3,
+            "has_pdf_attachment": true
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:43:22.345Z",
+        "actor_id": "GATEWAY_API",
+        "action_type": "CREATE",
+        "resource_id": "obs-glucose-001",
+        "resource_type": "FHIR_OBSERVATION",
+        "outcome": "success",
+        "details": {
+            "code_loinc": "2339-0",
+            "value": 5.2,
+            "unit_ucum": "mmol/L",
+            "patient_ref": "Patient/pat-123456789012345"
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:43:22.567Z",
+        "actor_id": "DMP_GENERATOR",
+        "action_type": "CREATE",
+        "resource_id": "cda-crbio-001",
+        "resource_type": "CDA_DOCUMENT",
+        "outcome": "success",
+        "details": {
+            "document_type": "CR-BIO",
+            "loinc_code": "11502-2",
+            "patient_ins": "123456789012345",
+            "author_rpps": "10101010101",
+            "custodian_finess": "999999999",
+            "body_type": "nonXMLBody",
+            "pdf_size_bytes": 45678
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:43:22.789Z",
+        "actor_id": "CDA_VALIDATOR",
+        "action_type": "VALIDATE",
+        "resource_id": "cda-crbio-001",
+        "resource_type": "CDA_DOCUMENT",
+        "outcome": "success",
+        "details": {
+            "validation_type": "ANS_CI_SIS",
+            "has_record_target": true,
+            "has_ins_oid": true,
+            "has_author_rpps": true,
+            "has_custodian_finess": true,
+            "errors": 0,
+            "warnings": 0
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:44:33.890Z",
+        "actor_id": "pfi@mssante.local",
+        "action_type": "MSSANTE_SENT",
+        "resource_id": "pat-123456789012345",
+        "resource_type": "MSSANTE_MESSAGE",
+        "outcome": "success",
+        "details": {
+            "recipient": "dr.martin@medecin.mssante.fr",
+            "subject": "Lettre de Liaison - Patient TESTEUR",
+            "message_id": "msg-mss-abc123",
+            "attachment_type": "CDA_XML",
+            "tls_version": "TLSv1.3",
+            "smtp_response": "250 OK"
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:45:12.234Z",
+        "actor_id": "SIU_WRITEBACK",
+        "action_type": "CREATE",
+        "resource_id": "apt-rdv-001",
+        "resource_type": "HL7_SIU_S12",
+        "outcome": "success",
+        "details": {
+            "message_type": "SIU^S12",
+            "appointment_id": "apt-rdv-001",
+            "patient_ins": "123456789012345",
+            "service": "Radiologie",
+            "target_system": "HIS_LEGACY",
+            "ack_received": "AA"
+        }
+    },
+    {
+        "timestamp": "2026-01-29T10:50:00.000Z",
+        "actor_id": "CRASH_TEST_SEGUR",
+        "action_type": "CONFORMITY_TEST",
+        "resource_id": "REPORT-20260129",
+        "resource_type": "SEGUR_CONFORMITY",
+        "outcome": "success",
+        "details": {
+            "total_tests": 22,
+            "passed": 22,
+            "failed": 0,
+            "warnings": 0,
+            "categories": [
+                "GAZELLE",
+                "INSI",
+                "DMP",
+                "SECURITY"
+            ],
+            "compliance_rate": "100%"
+        }
+    }
+]
