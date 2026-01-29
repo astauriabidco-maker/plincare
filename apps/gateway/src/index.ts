@@ -3,6 +3,7 @@ import { logger, auditLogger } from '@plincare/shared';
 import schedulingRoutes from './routes/scheduling';
 import dmpRoutes from './routes/dmp';
 import mssanteRoutes from './routes/mssante';
+import crashTestRoutes from './routes/crash-test';
 
 const app = express();
 app.use(express.json());
@@ -21,6 +22,9 @@ app.use('/api/dmp', dmpRoutes);
 
 // Mount MSSanté routes (Phase 7 - Secure Messaging)
 app.use('/api/mssante', mssanteRoutes);
+
+// Mount Crash Test routes (Ségur Conformity)
+app.use('/api/crash-test', crashTestRoutes);
 
 // Generic FHIR ingestion endpoint for other resource types
 app.post('/api/fhir/:resourceType', (req, res) => {
@@ -66,5 +70,6 @@ app.listen(PORT, () => {
     logger.info('Scheduling APIs (Phase 5) mounted: Schedule, Slot, Appointment, HealthcareService');
     logger.info('DMP APIs (Phase 6) mounted: /api/dmp/generate-cda, /api/dmp/validate-cda');
     logger.info('MSSanté APIs (Phase 7) mounted: /api/mssante/send, /api/mssante/lookup-rpps');
+    logger.info('Crash Test APIs mounted: /api/crash-test/run-all, /api/crash-test/dashboard');
 });
 
